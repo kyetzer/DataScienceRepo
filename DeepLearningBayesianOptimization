@@ -1,0 +1,45 @@
+from bayes_opt import BayesianOptimization
+import tensorflow as tf
+
+# 1. Define the objective function (neural network training and validation)
+def objective(learning_rate, num_layers, units_per_layer):
+    # Build the deep learning model with the given hyperparameters
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Dense(units=int(units_per_layer), activation='relu', input_shape=(input_dim,)))
+    for _ in range(int(num_layers) - 1):
+        model.add(tf.keras.layers.Dense(units=int(units_per_layer), activation='relu'))
+    model.add(tf.keras.layers.Dense(units=num_classes, activation='softmax'))
+
+    # Compile the model
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+
+    # Train the model
+    model.fit(X_train, y_train, epochs=10, verbose=0)  # Keep training silent for optimization
+
+    # Evaluate the model on the validation set
+    loss, accuracy = model.evaluate(X_val, y_val, verbose=0)
+    return accuracy  # Maximize accuracy
+
+# 2. Define the hyperparameter search space
+pbounds = {
+    'learning_rate': (1e-4, 1e-2),
+    'num_layers': (1, 5),
+    'units_per_layer': (32, 256),
+}
+
+# 3. Initialize the Bayesian optimizer
+optimizer = BayesianOptimization(
+    f=objective,
+    pbounds=pbounds,
+    random_state=1,
+)
+
+# 4. Perform optimization
+optimizer.maximize(
+    init_points=5,  # Number of random initial points
+    n_iter=20,  # Number of Bayesian optimization iterations
+)
+
+# 5. Print the best hyperparameters
+print(optimizer.max)
